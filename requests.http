@@ -1,0 +1,44 @@
+### Register
+POST http://127.0.0.1:5000/v1/auth/register
+Content-Type: application/json
+
+{
+    "email": "test3@email.com",
+    "password": "password",
+    "firstName": "firstName",
+    "lastName": "lastName",
+    "username": "myusername3"
+}
+
+
+### Login
+POST http://127.0.0.1:5000/v1/auth/login
+Content-Type: application/json
+
+{
+    "email": "test@email.com",
+    "password": "password"
+}
+
+
+### Remote Register
+POST http://sample-env.eba-fdbgxttt.eu-north-1.elasticbeanstalk.com/v1/auth/register
+Content-Type: application/json
+
+{
+    "email": "test30@email.com",
+    "password": "password",
+    "firstName": "firstName",
+    "lastName": "lastName",
+    "username": "myusername30"
+}
+
+
+### Remote Login
+POST http://sample-env.eba-fdbgxttt.eu-north-1.elasticbeanstalk.com//v1/auth/login
+Content-Type: application/json
+
+{
+    "email": "test@email.com",
+    "password": "password"
+}

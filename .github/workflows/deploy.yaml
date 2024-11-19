@@ -1,0 +1,124 @@
+name: Deploy Sample Express Server
+
+on:
+  push:
+    branches:
+      - master
+      
+env: 
+  AWS_REGION: ${{ secrets.REGION }}
+  IAM_ROLE: ${{ secrets.IAM_ROLE }}
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASS: ${{ secrets.DB_PASS }}
+  DB_NAME: ${{ secrets.DB_NAME }}
+
+permissions:
+  contents: read
+  id-token: write  
+
+jobs:
+  DeployMyApp:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.IAM_ROLE }}
+        role-session-name: github-pipeline
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.7.0
+        terraform_wrapper: false
+    
+    - name: Initialize Terraform
+      run: terraform init
+      working-directory: terraform
+
+    - name: Run Terraform Plan
+      env:
+        DB_USER: ${{ env.DB_USER }}
+        DB_PASS: ${{ env.DB_PASS }}
+        DB_NAME: ${{ env.DB_NAME }} 
+      run: |
+        terraform plan \
+          -var="db_username=$DB_USER" \
+          -var="db_password=$DB_PASS" \
+          -var="db_name=$DB_NAME"
+      working-directory: terraform
+
+    - name: Run Terraform Apply
+      env:
+        DB_USER: ${{ env.DB_USER }}
+        DB_PASS: ${{ env.DB_PASS }}
+        DB_NAME: ${{ env.DB_NAME }}
+      run: |
+        terraform apply -auto-approve \
+          -var="db_username=$DB_USER" \
+          -var="db_password=$DB_PASS" \
+          -var="db_name=$DB_NAME"
+      working-directory: terraform
+
+    - name: Capture Terraform Outputs
+      run: |
+        DB_ENDPOINT=$(terraform output -raw postgresql_endpoint | tr -d '\n' | tr -d '\r')
+        echo "DB_ENDPOINT=$DB_ENDPOINT" >> $GITHUB_ENV
+      working-directory: terraform
+
+    - name: Install Node.js dependencies
+      run: npm install
+
+    - name: Install Node.js dependencies
+      run: npm run test   
+
+    - name: Build Node.js Application (if needed)
+      run: npm run build
+
+    - name: Create ZIP deployment package
+      run: zip -r deploy_package.zip .
+
+    - name: Upload package to S3 bucket
+      run: aws s3 cp deploy_package.zip s3://just-a-bucket-to-test-1/  
+
+    - name: Create new ElasticBeanstalk Application Version
+      run: |
+        aws elasticbeanstalk create-application-version \
+        --application-name sample \
+        --source-bundle S3Bucket="just-a-bucket-to-test-1",S3Key="deploy_package.zip" \
+        --version-label "ver-${{ github.sha }}" \
+        --description "commit-sha-${{ github.sha }}"
+
+    - name: Deploy new ElasticBeanstalk Application Version
+      run: |
+        echo '[
+            {
+              "Namespace": "aws:elasticbeanstalk:application:environment",
+              "OptionName": "DB_USER",
+              "Value": "${{ env.DB_USER }}"
+            },
+            {
+              "Namespace": "aws:elasticbeanstalk:application:environment",
+              "OptionName": "DB_PASS",
+              "Value": "${{ env.DB_PASS }}"
+            },
+            {
+              "Namespace": "aws:elasticbeanstalk:application:environment",
+              "OptionName": "DB_NAME",
+              "Value": "${{ env.DB_NAME }}"
+            },
+            {
+              "Namespace": "aws:elasticbeanstalk:application:environment",
+              "OptionName": "DB_ENDPOINT",
+              "Value": "${{ env.DB_ENDPOINT }}"
+            }
+          ]' > option-settings.json
+          aws elasticbeanstalk update-environment \
+            --environment-name Sample-env \
+            --version-label "ver-${{ github.sha }}" \
+            --option-settings file://option-settings.json
