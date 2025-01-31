@@ -26,11 +26,11 @@ POST http://sample-env.eba-fdbgxttt.eu-north-1.elasticbeanstalk.com/v1/auth/regi
 Content-Type: application/json
 
 {
-    "email": "test30@email.com",
+    "email": "test3d0@email.com",
     "password": "password",
     "firstName": "firstName",
     "lastName": "lastName",
-    "username": "myusername30"
+    "username": "myusernamed30"
 }
 
 

@@ -1,6 +1,6 @@
 import request from 'supertest';
 import express from 'express';
-import router from './auth.routes'; // Your route file
+import router from './auth.routes';
 import { UserRepository } from './user.repository';
 import bcrypt from 'bcryptjs';
 
@@ -10,7 +10,7 @@ jest.mock('./auth.utils');
 jest.mock('../utils/logger');
 
 const app = express();
-app.use(express.json()); // Middleware for parsing JSON
+app.use(express.json());
 app.use('/auth', router);
 
 describe('Auth Routes', () => {
