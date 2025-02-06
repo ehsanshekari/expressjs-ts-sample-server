@@ -1,4 +1,4 @@
-name: Deploy Sample Express Server
+name: Test
 
 on:
   push:
